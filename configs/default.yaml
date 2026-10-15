@@ -1,6 +1,18 @@
-# M0 only. These settings describe a synthetic fixture, not reconstruction thresholds.
+# CPU-only M0/M1 settings; quality/selection thresholds are unvalidated heuristics.
 schema_version: 1
 random_seed: 0
 visualization:
   application_id: roomdelta-m0-synthetic
   point_spacing_m: 0.2
+extraction:
+  frames_per_recording: 12
+  candidate_stride: 5
+  min_blur_score: 20.0
+  min_time_separation_s: 0.5
+  diversity_weight: 0.35
+  target_width: 640
+  target_height: 480
+  resize_mode: letterbox
+  aruco_enabled: false
+  aruco_dictionary: DICT_4X4_50
+  marker_side_m: null

@@ -63,12 +63,20 @@ def test_environment_stage_saves_actual_versions_and_effective_config(tmp_path: 
     assert not (output / "roomdelta.rrd").exists()
 
 
-@pytest.mark.parametrize("stage", ["all", "extract-frames", "reconstruct", "volumetric", "verify", "semantics", "navigation", "evaluate"])
+@pytest.mark.parametrize("stage", ["all", "reconstruct", "volumetric", "verify", "semantics", "navigation", "evaluate"])
 def test_future_stages_fail_explicitly_without_artifacts(tmp_path: Path, stage: str) -> None:
     output = tmp_path / "out"
     result = cli("--stage", stage, "--output", str(output))
     assert result.returncode == 2
     assert "not implemented in M0" in result.stderr
+    assert not output.exists()
+
+
+def test_extract_frames_requires_video_pair(tmp_path: Path) -> None:
+    output = tmp_path / "out"
+    result = cli("--stage", "extract-frames", "--output", str(output))
+    assert result.returncode == 2
+    assert "requires --before and --after" in result.stderr
     assert not output.exists()
 
 

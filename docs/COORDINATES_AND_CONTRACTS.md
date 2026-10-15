@@ -1,4 +1,4 @@
-# Coordinates and shared data contracts (M0)
+# Coordinates and shared data contracts
 
 The runtime definitions are in `src/roomdelta/contracts.py`. These are normalized
 interfaces for later milestones, not a claim that a raw model already produces
@@ -25,10 +25,13 @@ are deferred to M2.
   positive-z points retain their coordinates but are invalid.
 - Dimensions are `(width,height)` in manifests; depth indexing is `[frame,v,u]`.
   A resize/crop affine A maps original pixels to processed pixels. Record A and
-  transform `K_processed = A @ K_original`. M0 accepts positive, axis-aligned
-  resize/crop transforms; it does not perform frame extraction or resampling.
-  The caller must supply the pixel-centre convention of the actual image resizer
-  in A, including any half-pixel offsets.
+  transform canonical intrinsics with `K_processed = S @ K_upright` for resize/pad/crop S.
+  M1's full `pixel_transform = S @ R` maps **raw decoded** to final pixels, including
+  a proper display quarter-turn R. The geometry contract accepts scaled proper
+  quarter-turns, rejecting reflection/shear. `A @ K_raw` after rotation is a projection
+  matrix in raw camera axes, not generally canonical OpenCV K. The resize-only
+  `transform_intrinsics` helper rejects that case; camera axes must be handled explicitly.
+  See [dataset preparation](DATASET_PREPARATION.md) for exact pixel-centre offsets.
 
 ## Scale labels
 
@@ -57,6 +60,11 @@ World-coordinate normalization (+Z up) is also the M2 adapter's responsibility.
 Scenario/timepoint (`before` or `after`), `Path` to the processed image, source
 filename and timestamp in seconds, original/processed `(W,H)`, 3×3 pixel affine,
 stable integer index, validity, optional nonnegative blur score and quality reasons.
+`original_size_wh` always means raw decoded sensor dimensions, including when display
+orientation swaps the axes. Version 2 manifests additionally name raw/upright sizes
+and the rotation/resize decomposition; the complete affine includes both steps.
+M1 adds optional `source_frame_index` (decoded index within the source video),
+preserving backward compatibility for M0 callers. Manifest index remains global.
 Paths are metadata; constructors do not access user files. The CLI checks provided
 recording/cache paths. Invalid frames cannot have valid depth in a cache.
 

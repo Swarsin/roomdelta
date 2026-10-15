@@ -40,14 +40,20 @@ def validate_intrinsics(K: object) -> FloatArray:
 
 
 def validate_pixel_transform(transform: object) -> FloatArray:
-    """Validate a positive axis-aligned resize/crop affine in pixel coordinates."""
+    """Validate resize/pad/crop with a proper 0/90/180/270-degree pixel rotation.
+
+    The linear block is a scaled signed axis permutation with positive determinant.
+    Shear, reflection and general-angle rotation are deliberately unsupported.
+    """
     affine = finite_array(transform, (3, 3), "pixel_transform")
+    linear = affine[:2, :2]
+    nonzero = linear != 0
     if (
-        affine[0, 0] <= 0 or affine[1, 1] <= 0
-        or affine[0, 1] != 0 or affine[1, 0] != 0
+        not (nonzero.sum(axis=0) == 1).all() or not (nonzero.sum(axis=1) == 1).all()
+        or np.linalg.det(linear) <= 0
         or not np.allclose(affine[2], [0, 0, 1], atol=1e-9, rtol=0)
     ):
-        raise ValueError("pixel_transform must represent positive axis-aligned resize/crop")
+        raise ValueError("pixel_transform must represent resize/crop with a proper quarter-turn rotation (no shear/reflection)")
     return affine
 
 
@@ -70,8 +76,15 @@ def transform_points(points: object, transform: object) -> FloatArray:
 
 
 def transform_intrinsics(K: object, pixel_transform: object) -> FloatArray:
-    """Return K_processed = A @ K_original for the recorded resize/crop A."""
-    return validate_intrinsics(validate_pixel_transform(pixel_transform) @ validate_intrinsics(K))
+    """Return canonical K_processed = A @ K_original for resize/pad/crop only.
+
+    For rotation, A @ K_raw is a projection matrix in raw camera axes, not a
+    canonical OpenCV K. Re-expressing camera axes/poses is outside this helper.
+    """
+    affine = validate_pixel_transform(pixel_transform)
+    if affine[0, 0] <= 0 or affine[1, 1] <= 0 or affine[0, 1] != 0 or affine[1, 0] != 0:
+        raise ValueError("transform_intrinsics supports resize/crop only; rotation requires explicit camera-axis conversion")
+    return validate_intrinsics(affine @ validate_intrinsics(K))
 
 
 @dataclass(frozen=True)

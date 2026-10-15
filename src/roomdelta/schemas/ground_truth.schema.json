@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RoomDelta human ground truth, version 1",
+  "description": "Human annotations only. Pending empty events do not assert an unchanged scene. Metric values require physical measurements; unknown values remain null.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "scenario", "data_kind", "annotations_status", "annotator", "source_recordings", "coordinate_system", "origin_description", "unit", "events", "notes"],
+  "properties": {
+    "schema_version": {"const": "roomdelta-ground-truth/1"},
+    "scenario": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"},
+    "data_kind": {"enum": ["real", "synthetic"]},
+    "annotations_status": {"enum": ["pending", "complete"]},
+    "annotator": {"type": ["string", "null"], "minLength": 1},
+    "source_recordings": {
+      "type": "object", "additionalProperties": false, "required": ["before", "after"],
+      "properties": {"before": {"type": "string", "minLength": 1}, "after": {"type": "string", "minLength": 1}}
+    },
+    "coordinate_system": {"const": "right-handed world: +Z up"},
+    "origin_description": {"type": ["string", "null"], "minLength": 1},
+    "unit": {"const": "m"},
+    "events": {"type": "array", "items": {"$ref": "#/$defs/event"}, "uniqueItems": true},
+    "notes": {"type": "string"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"annotations_status": {"const": "complete"}}},
+      "then": {"properties": {"annotator": {"type": "string", "minLength": 1}}}
+    },
+    {
+      "if": {
+        "properties": {
+          "events": {
+            "contains": {
+              "anyOf": [
+                {"required": ["before_centroid"], "properties": {"before_centroid": {"type": "object"}}},
+                {"required": ["after_centroid"], "properties": {"after_centroid": {"type": "object"}}},
+                {"required": ["measured_displacement"], "properties": {"measured_displacement": {"type": "object", "required": ["vector_m"], "properties": {"vector_m": {"type": "array"}}}}}
+              ]
+            }
+          }
+        }
+      },
+      "then": {"properties": {"origin_description": {"type": "string", "minLength": 1}}}
+    }
+  ],
+  "$defs": {
+    "vector3": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number"}},
+    "position": {
+      "type": "object", "additionalProperties": false,
+      "required": ["xyz_m", "uncertainty_m", "method"],
+      "properties": {
+        "xyz_m": {"$ref": "#/$defs/vector3"},
+        "uncertainty_m": {"type": "number", "minimum": 0},
+        "method": {"type": "string", "minLength": 1}
+      }
+    },
+    "displacement": {
+      "type": "object", "additionalProperties": false,
+      "required": ["distance_m", "vector_m", "uncertainty_m", "method"],
+      "properties": {
+        "distance_m": {"type": "number", "minimum": 0},
+        "vector_m": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/vector3"}]},
+        "uncertainty_m": {"type": "number", "minimum": 0},
+        "method": {"type": "string", "minLength": 1}
+      }
+    },
+    "event": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "object_label", "type", "before_centroid", "after_centroid", "measured_displacement", "notes"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "object_label": {"type": "string", "minLength": 1},
+        "type": {"enum": ["added", "removed", "moved"]},
+        "before_centroid": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/position"}]},
+        "after_centroid": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/position"}]},
+        "measured_displacement": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/displacement"}]},
+        "notes": {"type": "string"}
+      },
+      "allOf": [
+        {"if": {"properties": {"type": {"const": "added"}}}, "then": {"properties": {"before_centroid": {"type": "null"}}}},
+        {"if": {"properties": {"type": {"const": "removed"}}}, "then": {"properties": {"after_centroid": {"type": "null"}}}},
+        {"if": {"properties": {"type": {"enum": ["added", "removed"]}}}, "then": {"properties": {"measured_displacement": {"type": "null"}}}}
+      ]
+    }
+  }
+}

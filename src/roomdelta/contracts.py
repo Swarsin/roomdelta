@@ -84,8 +84,10 @@ def _bounds(value: object, name: str) -> FloatArray:
 class FrameRecord:
     """Manifest entry; dimensions are (W,H), timestamp is seconds from source start.
 
-    pixel_transform[3,3] maps original pixel coordinates to processed coordinates.
+    pixel_transform[3,3] maps raw decoded pixel coordinates to processed coordinates,
+    including a display quarter-turn when present; original_size_wh remains raw.
     index is the stable zero-based index into every reconstruction frame array.
+    source_frame_index, when supplied, is the decoded index in the source video.
     """
 
     scenario: str
@@ -100,12 +102,16 @@ class FrameRecord:
     valid: bool = True
     blur_score: float | None = None
     quality_reasons: tuple[str, ...] = ()
+    source_frame_index: int | None = None
 
     def __post_init__(self) -> None:
         _require(bool(self.scenario and self.source_filename), "scenario and source_filename are required")
         _require(self.timepoint in ("before", "after"), "timepoint must be before or after")
         _require(isinstance(self.file_path, Path), "file_path must be a pathlib.Path")
         _require(type(self.index) is int and self.index >= 0, "frame index must be a nonnegative integer")
+        _require(self.source_frame_index is None or
+                 (type(self.source_frame_index) is int and self.source_frame_index >= 0),
+                 "source_frame_index must be a nonnegative integer or None")
         _require(type(self.valid) is bool, "frame valid must be bool")
         _nonnegative(self.timestamp_s, "timestamp_s")
         _size_wh(self.original_size_wh, "original_size_wh")

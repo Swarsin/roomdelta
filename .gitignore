@@ -14,6 +14,21 @@ dist/
 .idea/
 .vscode/
 
+# Local agent instructions, conversation notes and milestone planning
+AGENTS.md
+START_HERE.md
+.opencode/
+plans/
+docs/BUILD_SPEC.md
+docs/OPENCODE_PHASE_PROMPTS.md
+docs/KAGGLE_PLAYBOOK.md
+docs/ORIGINAL_ROADMAP.md
+docs/CONVERSATION_HISTORY.md
+docs/M*_VERIFICATION.md
+docs/*PLAN*.md
+docs/*ROADMAP*.md
+docs/*PROMPT*.md
+
 # Secrets / credentials (only the empty example is tracked)
 .env
 .env.*
@@ -37,6 +52,13 @@ wandb/
 *.mov
 *.avi
 *.mkv
+*.MP4
+*.MOV
+*.AVI
+*.MKV
+*.m4v
+*.webm
+*.3gp
 *.rrd
 *.ply
 *.npz
@@ -45,6 +67,16 @@ wandb/
 *.pth
 *.ckpt
 *.safetensors
+frames/
+.roomdelta-frames-*/
+frame_*.png
+contact_sheet_*.jpg
+frames_manifest.json
+ground_truth*.json
+!/src/roomdelta/schemas/ground_truth.schema.json
+effective_config.yaml
+environment.json
+run_manifest.json
 
 # OS / notebook leftovers
 .DS_Store

@@ -4,11 +4,13 @@ RoomDelta is a Python 3.11 project for reconstructing a shared indoor 3D scene
 from before/after phone recordings and verifying meaningful changes using
 visibility and uncertainty evidence.
 
-**Current milestone: M0 only.** The installable package, validated shared data
-contracts, camera geometry utilities, stage-aware CLI, CPU tests and synthetic
-Rerun example are implemented. Video processing, VGGT inference/cache loading,
-calibration estimation, change detection, semantics, navigation and evaluation
-are pending M1–M8. The demo is analytic synthetic geometry, not model output.
+**Current implementation: M0 + M1 video preparation.** The installable package,
+validated shared contracts, camera geometry, CPU tests, synthetic Rerun example,
+video frame selection/preprocessing, manifests, optional ArUco corner detection
+and human ground-truth schema are implemented. Authentic scenario recordings
+still need to be supplied and inspected before accepting the dataset gate.
+VGGT/cache loading, calibration estimation, change detection, semantics,
+navigation and evaluation remain unimplemented. The 3D demo is synthetic geometry.
 
 ## Install in the existing environment (Ubuntu / WSL2)
 
@@ -27,11 +29,13 @@ If your environment was created by `uv` without pip, bootstrap only pip with
 No environment recreation or PyTorch installation is needed.
 
 **PyTorch and torchvision are deliberately absent from project dependencies.**
-M0 does not require them, and installing RoomDelta does not request changes to
+M0/M1 do not require them, and installing RoomDelta does not request changes to
 your CUDA stack. Future GPU dependencies will be isolated and reviewed in M2.
-NumPy, PyYAML, pytest and Rerun versions are pinned to tested versions.
+NumPy, PyYAML, OpenCV contrib headless, pytest, JSON Schema and Rerun versions
+are pinned to tested versions. Use only one OpenCV wheel variant in this
+environment; the headless contrib build includes ArUco and needs no display.
 
-For CPU-only geometry/contracts testing without Rerun, install `'.[test]'`;
+For CPU-only geometry/contracts/video testing without Rerun, install `'.[test]'`;
 the visualization integration test is then skipped if Rerun is unavailable.
 
 ## Windows PowerShell setup
@@ -48,10 +52,43 @@ python -m roomdelta.pipeline --help
 
 Only on a fresh checkout with no environment, first run
 `py -3.11 -m venv .venv`. Install any GPU stack separately when required;
-RoomDelta's M0 install never installs PyTorch. PowerShell instructions are
+RoomDelta's install never installs PyTorch. PowerShell instructions are
 provided for portability; this milestone's execution is on Ubuntu WSL2.
 
-## Run M0
+## Prepare real before/after videos (M1)
+
+```bash
+python -m roomdelta.pipeline --stage extract-frames --before data/basic/before.mp4 --after data/basic/after.mp4 --scenario basic --config configs/default.yaml --output outputs/basic/frames
+```
+
+Equivalent script, with optional ArUco detection:
+
+```bash
+python scripts/prepare_frames.py --before data/basic/before.mp4 --after data/basic/after.mp4 --scenario basic --output outputs/basic/frames_with_markers --aruco --aruco-dictionary DICT_4X4_50 --marker-side-m YOUR_MEASURED_SIDE_IN_METRES
+```
+
+Replace the marker-size placeholder with your **ruler-measured** physical side
+length. ArUco detection records IDs/corners/that measurement, not camera poses or
+metric reconstruction scale. It can run without a size, storing `null` instead.
+Output directories must be new to protect previous selections and annotations.
+
+Defaults select **12 frames per recording**, with blur filtering, temporal
+coverage and a thumbnail appearance heuristic; image differences do not establish
+distinct camera positions. Processing defaults to 640×480 letterboxing. Inspect
+`contact_sheet_before.jpg`, `contact_sheet_after.jpg`, the individual PNGs, and
+`frames_manifest.json`. Copy `ground_truth.template.json` to `ground_truth.json`
+and enter actual annotations; the pending empty template does not assert unchanged.
+
+Display-rotation metadata is applied exactly once before preprocessing; the manifest
+retains raw sensor size, upright size and the full rotation/resize/padding transform.
+For portrait videos, add `--target-size 480 640`. `--native-resolution` preserves
+upright native size rather than leaving the decoded sensor image sideways.
+
+See [`docs/DATASET_PREPARATION.md`](docs/DATASET_PREPARATION.md) for capture
+instructions, exact settings/commands, timestamp and transform conventions,
+manifest schema, annotation validation, and known limitations.
+
+## Run the M0 synthetic demo
 
 ```bash
 python -m roomdelta.pipeline --stage environment --check-cuda --output outputs/m0/environment
@@ -78,7 +115,7 @@ Each successful stage writes:
 
 | File | Contents |
 |---|---|
-| `effective_config.yaml` | Resolved and validated M0 settings |
+| `effective_config.yaml` | Resolved and validated settings, including CLI overrides |
 | `environment.json` | Actual Python/platform/dependency versions and optional CUDA probe |
 | `run_manifest.json` | Stage, UTC timestamp, seed, effective config, CPU execution, no-model provenance, artifact names |
 | `roomdelta.rrd` | Synthetic stage only: saved Rerun recording and default blueprint |
@@ -98,9 +135,9 @@ python scripts/evaluate.py --help
 python kaggle/run_vggt.py --help
 ```
 
-The first two commands document the future interface: in M0 they exit with a
+The first two commands document the future interface: they exit with a
 missing-input or unimplemented-stage error. Available stage names and milestone
-boundaries are shown by `--help`; only `environment` and `synthetic` run today.
+boundaries are shown by `--help`; `environment`, `synthetic` and `extract-frames` run today.
 The evaluation and Kaggle runners are help/error stubs and produce no results.
 See [`kaggle/README.md`](kaggle/README.md) for the planned manual Kaggle handoff.
 
@@ -122,19 +159,22 @@ array shapes, validation, scale labels and coordinate conventions. Key invariant
 ## Project structure
 
 ```text
-configs/default.yaml            M0 configuration
+configs/default.yaml            M0/M1 configuration
 src/roomdelta/
   __init__.py                   Package version
   config.py                     Strict YAML loading
   contracts.py                  Typed validated frame/cache/voxel/change interfaces
   geometry.py                   Rigid poses, intrinsics, projection
+  frames.py                     Video selection/preprocessing and manifest I/O
+  schemas/ground_truth.schema.json  Human annotation JSON Schema
   pipeline.py                   Stage-aware CLI and environment/run reports
   visualization.py              Analytic synthetic Rerun fixture
   volumetric.py                 M3 reserved module
   verification.py               M4 reserved module
   semantics.py                  M5 reserved module
   navigation.py                 M6 reserved module
-tests/                          Synthetic math, contract validation, CLI integration
+tests/                          Synthetic math/videos, validation, CLI integration
+scripts/prepare_frames.py        M1 before/after frame preparation
 scripts/create_demo.py          M0 demo wrapper
 scripts/evaluate.py             M7 help/error stub
 kaggle/                         M2 handoff stub and notes
@@ -144,12 +184,12 @@ data/                           User-supplied recordings/frames (ignored)
 ```
 
 `.gitignore` excludes local environments, secrets, recordings, model weights,
-caches and generated geometry. `.env.example` is empty of credentials; M0 does
+caches and extracted/generated assets. `.env.example` is empty of credentials; M0/M1 do
 not load environment secrets or select an API provider.
 
 ## Next milestone prerequisites
 
-Review M0 first. M1 requires authentic before/after phone recordings for unchanged,
+Dataset validation requires authentic before/after phone recordings for unchanged,
 basic, occlusion and replacement/navigation scenarios, the **ruler-measured**
 ArUco marker side length, and ground-truth notes on actual object changes. M2
 will additionally require a user-run Kaggle reconstruction and returned real

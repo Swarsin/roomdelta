@@ -5,24 +5,28 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "roomdelta"
 version = "0.0.1"
-description = "Visibility- and uncertainty-aware indoor 3D change detection (M0 scaffold)"
+description = "Indoor 3D change detection interfaces and video dataset preparation"
 readme = "README.md"
 requires-python = ">=3.11,<3.12"
 dependencies = [
   "numpy==2.4.6",
   "PyYAML==6.0.3",
+  "opencv-contrib-python-headless==5.0.0.93",
 ]
 
 [project.optional-dependencies]
 visualization = ["rerun-sdk==0.39.0"]
-test = ["pytest==9.1.1"]
-dev = ["pytest==9.1.1", "rerun-sdk==0.39.0"]
+test = ["pytest==9.1.1", "jsonschema==4.26.0"]
+dev = ["pytest==9.1.1", "rerun-sdk==0.39.0", "jsonschema==4.26.0"]
 
 [project.scripts]
 roomdelta = "roomdelta.pipeline:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+roomdelta = ["schemas/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
