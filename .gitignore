@@ -1,0 +1,52 @@
+# Python / local environments and tooling
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+.idea/
+.vscode/
+
+# Secrets / credentials (only the empty example is tracked)
+.env
+.env.*
+!.env.example
+secrets/
+credentials/
+kaggle.json
+*.pem
+*.key
+
+# Private inputs, model weights and generated artifacts
+data/
+outputs/
+cache/
+caches/
+checkpoints/
+weights/
+wandb/
+.cache/
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.rrd
+*.ply
+*.npz
+*.npy
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+# OS / notebook leftovers
+.DS_Store
+Thumbs.db
+.ipynb_checkpoints/

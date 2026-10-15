@@ -1,0 +1,6 @@
+# M0 only. These settings describe a synthetic fixture, not reconstruction thresholds.
+schema_version: 1
+random_seed: 0
+visualization:
+  application_id: roomdelta-m0-synthetic
+  point_spacing_m: 0.2
